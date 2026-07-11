@@ -10,18 +10,11 @@
     "vercel-build": "echo \"no build step (serverless functions ship source as-is)\""
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": "22.x"
   },
   "keywords": ["express", "supabase", "vercel", "serverless"],
   "author": "",
   "license": "ISC",
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "^11.10.0",
-      "onFail": "download"
-    }
-  },
   "type": "module",
   "dependencies": {
     "@supabase/supabase-js": "^2.110.1",
