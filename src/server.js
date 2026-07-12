@@ -1,23 +1,16 @@
 // filepath: src/server.js
-// Vercel serverless entry point.
+// Application entry point. Used both as the local dev entry (`pnpm dev`,
+// `pnpm start`) and as the Vercel serverless entry.
 //
-// Vercel's Node.js runtime auto-detects a file named `server.js` (or
-// `src/server.js`) and captures the HTTP server it creates via `listen()`.
-// All incoming requests are routed to that server. This is the recommended
-// way to deploy an Express app to Vercel.
-//
-// On Vercel:
-//   - Vercel imports this module, we call `server.listen()` here, and
-//     Vercel hooks into that listener to route requests.
-//   - The PORT arg is irrelevant on Vercel (it ignores the bound port and
-//     uses an internal one); it only matters for `pnpm dev` locally.
-//
-// On local dev (pnpm dev / pnpm start):
-//   - This module is also the entry. We boot an HTTP server and print the
-//     usual logs. `src/index.js` is no longer required for local dev but is
-//     kept as a thin shim for backward compatibility.
+// Vercel's Node.js runtime auto-detects this file (via the `server.js`
+// filename convention) and captures the HTTP server it creates via
+// `listen()` during module load. To make that work, we always call
+// `app.listen()` — even on Vercel, where the bound port is irrelevant
+// because Vercel routes requests to the listener through an internal
+// port.
 
 import express from 'express';
+import cors from 'cors';
 import { env } from './config/env.js';
 import router from './routes/index.js';
 import { notFoundHandler } from './middleware/notFound.js';
@@ -25,27 +18,87 @@ import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
 
-// CORS is configured at the Vercel edge via the `headers` block in
-// vercel.json. This guarantees CORS headers on every response —
-// including preflight OPTIONS that Vercel intercepts before any lambda
-// runs. Keeping it out of Express means there is no risk of the lambda
-// and the CDN emitting conflicting headers.
-//
-// For local dev, the Vite proxy in the Astro frontend already forwards
-// /api → this server, so the browser never makes a true cross-origin
-// request and CORS is not exercised in dev.
+// --- CORS ------------------------------------------------------------------
+// Orígenes permitidos para el frontend.
+//   - Dev: lista blanca fija (Astro 4321, mismo puerto 3000) + dominio de
+//     producción como red de seguridad si CORS_ORIGINS no está seteado.
+//   - Prod (recomendado): setear CORS_ORIGINS en Vercel con los dominios
+//     exactos del front (CSV: https://a.com,https://b.com).
+//   - Por seguridad, si la lista efectiva resultante termina vacía o con
+//     menos de 2 entradas en producción, usamos `*` como fallback para
+//     no bloquear al front mientras se diagnostica. NUNCA se combina '*'
+//     con credentials:true (los browsers lo rechazan), así que en ese
+//     caso pasamos credentials=false para que al menos la request simple
+//     pase.
+const defaultOrigins = [
+  'http://localhost:4321',
+  'http://127.0.0.1:4321',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  // Dominio de producción conocido. Sobre-escribible vía env CORS_ORIGINS.
+  'https://frontend-tickets.vercel.app',
+];
+
+const isVercel = !!process.env.VERCEL;
+const envOrigins = [...new Set(env.corsOrigins)];
+const effectiveOrigins = [...new Set([...defaultOrigins, ...envOrigins])];
+
+const useWildcard = isVercel && effectiveOrigins.length < 2;
+if (useWildcard) {
+  console.warn(
+    `[cors] effective origins list has < 2 entries (${JSON.stringify(
+      effectiveOrigins,
+    )}); falling back to wildcard origin '*' (credentials disabled).`,
+  );
+}
+
+const corsOptions = useWildcard
+  ? {
+      // Wildcard fallback (no credentials).
+      origin: '*',
+      credentials: false,
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+      exposedHeaders: ['Content-Length', 'Content-Type'],
+      maxAge: 86400,
+      optionsSuccessStatus: 204,
+    }
+  : {
+      origin(origin, cb) {
+        if (!origin) return cb(null, true);
+        const normalized = origin.replace(/\/+$/, '').toLowerCase();
+        const allowed = effectiveOrigins.some(
+          (o) => (o || '').replace(/\/+$/, '').toLowerCase() === normalized,
+        );
+        if (!allowed) {
+          console.warn(`[cors] blocked origin: ${origin}`);
+        }
+        if (allowed) return cb(null, true);
+        return cb(null, false);
+      },
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+      exposedHeaders: ['Content-Length', 'Content-Type'],
+      maxAge: 86400,
+      optionsSuccessStatus: 204,
+    };
+
+app.use(cors(corsOptions));
+// Preflight explícito para todas las rutas (algunos proxies lo necesitan).
+app.options(/^\/.*/, cors(corsOptions));
 
 // --- TEMPORARY DEBUG ENDPOINT — remove after diagnosis ----------------------
 app.get('/_debug/cors', (req, res) => {
-  const envOrigins = (process.env.CORS_ORIGINS || process.env.CORS_ORIGIN || '')
-    .split(',').map((s) => s.trim()).filter(Boolean);
   res.json({
     requestOrigin: req.headers.origin || null,
-    processEnvCorsOrigins: envOrigins,
-    allCorsEnvVars: Object.fromEntries(
+    envCorsOrigins: env.corsOrigins,
+    effectiveOrigins,
+    useWildcard,
+    isVercel,
+    corsEnvVars: Object.fromEntries(
       Object.entries(process.env).filter(([k]) => /CORS|ORIGIN/i.test(k)),
     ),
-    vercel: !!process.env.VERCEL,
     nodeEnv: process.env.NODE_ENV,
   });
 });
@@ -72,11 +125,10 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 // --- Bootstrap --------------------------------------------------------------
-// Vercel auto-detection: `server.listen()` during module startup is what
-// signals Vercel's Node runtime to capture the server and route requests.
-// On Vercel, the PORT argument is ignored — Vercel assigns an internal port.
-const isVercel = !!process.env.VERCEL;
-
+// Always call `app.listen()` — Vercel's Node runtime requires it during
+// module load to capture the server, and it's a no-op-ish on Vercel where
+// the bound port is ignored. Locally we attach friendly startup logs and
+// signal handlers on top of the same listen call.
 if (isVercel) {
   // Vercel: just listen so the runtime captures the server.
   app.listen(env.port);
