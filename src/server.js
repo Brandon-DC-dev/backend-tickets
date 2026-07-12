@@ -88,22 +88,6 @@ app.use(cors(corsOptions));
 // Preflight explícito para todas las rutas (algunos proxies lo necesitan).
 app.options(/^\/.*/, cors(corsOptions));
 
-// --- TEMPORARY DEBUG ENDPOINT — remove after diagnosis ----------------------
-app.get('/_debug/cors', (req, res) => {
-  res.json({
-    requestOrigin: req.headers.origin || null,
-    envCorsOrigins: env.corsOrigins,
-    effectiveOrigins,
-    useWildcard,
-    isVercel,
-    corsEnvVars: Object.fromEntries(
-      Object.entries(process.env).filter(([k]) => /CORS|ORIGIN/i.test(k)),
-    ),
-    nodeEnv: process.env.NODE_ENV,
-  });
-});
-// ---------------------------------------------------------------------------
-
 // Core middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
