@@ -67,4 +67,13 @@ app.get('/', (req, res) => {
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-export default app;
+// Vercel serverless adapter.
+// `@vercel/node` invokes the default export as a Node http handler.
+// We delegate to Express so the full middleware chain (CORS, JSON, routers,
+// error handlers) runs exactly as it does locally.
+// Locally, index.js does `import { app } from './app.js'` and calls app.listen().
+// Vercel's bundler picks up the `handler` default export below.
+const handler = (req, res) => app(req, res);
+
+export { app, handler };
+export default handler;

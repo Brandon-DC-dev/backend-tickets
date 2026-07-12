@@ -4,7 +4,7 @@
 // - Vercel: this file is NOT used as the serverless entry; vercel.json points
 //   to src/app.js directly. Keeping app.listen() here would crash the lambda
 //   runtime because there is no port to bind.
-import app from './app.js';
+import { app } from './app.js';
 import { env } from './config/env.js';
 
 // Vercel sets this env var automatically on every deploy.
