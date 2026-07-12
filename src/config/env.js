@@ -31,9 +31,10 @@ export const env = {
   supabaseServiceRoleKey,
 
   // --- CORS ---
-  // CSV en .env: CORS_ORIGIN=https://app.example.com,https://admin.example.com
-  // Si está vacía, app.js usa defaults razonables para dev.
-  corsOrigins: (process.env.CORS_ORIGIN || '')
+  // CSV en .env: CORS_ORIGINS=https://app.example.com,https://admin.example.com
+  // Se acepta también CORS_ORIGIN (singular) por compatibilidad con despliegues
+  // antiguos. Si está vacía, app.js usa defaults razonables para dev.
+  corsOrigins: (process.env.CORS_ORIGINS || process.env.CORS_ORIGIN || '')
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean),

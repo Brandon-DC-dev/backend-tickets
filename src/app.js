@@ -9,13 +9,19 @@ import { errorHandler } from './middleware/errorHandler.js';
 const app = express();
 
 // Orígenes permitidos para el frontend.
-//   - Dev: lista blanca fija (Astro 4321, mismo puerto 3000).
-//   - Prod: tomar de env.corsOrigins (CSV en CORS_ORIGIN=https://a,https://b).
+//   - Dev: lista blanca fija (Astro 4321, mismo puerto 3000) + dominio de
+//     producción a modo de red de seguridad si CORS_ORIGINS no está seteado.
+//   - Prod (recomendado): setear CORS_ORIGINS en Vercel con los dominios
+//     exactos del front (CSV: https://a.com,https://b.com).
+//   - El callback de `cors` REFLEJA el origen del request (no usamos '*'),
+//     necesario porque credentials=true obliga a un origen explícito.
 const defaultOrigins = [
   'http://localhost:4321',
   'http://127.0.0.1:4321',
   'http://localhost:3000',
   'http://127.0.0.1:3000',
+  // Dominio de producción conocido. Sobre-escribible vía env CORS_ORIGINS.
+  'https://frontend-tickets.vercel.app',
 ];
 const origins =
   env.corsOrigins.length > 0 ? env.corsOrigins : defaultOrigins;

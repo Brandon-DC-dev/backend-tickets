@@ -49,7 +49,7 @@ Copia `.env.example` a `.env` para desarrollo local. **Nunca** commitees `.env`.
 | `SUPABASE_URL` | **Sí** | URL del proyecto Supabase |
 | `SUPABASE_ANON_KEY` | **Sí** | Anon / publishable key |
 | `SUPABASE_SERVICE_ROLE_KEY` | No | Service role (server-side only) |
-| `CORS_ORIGIN` | No | CSV de orígenes permitidos |
+| `CORS_ORIGINS` | No | CSV de orígenes permitidos (acepta también `CORS_ORIGIN` singular por compat) |
 
 ## Desarrollo local
 
