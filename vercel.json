@@ -1,18 +1,5 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "src/server.js",
-      "use": "@vercel/node",
-      "config": {
-        "maxLambdaSize": "50mb",
-        "runtime": "nodejs22.x"
-      }
-    }
-  ],
-  "routes": [
-    { "src": "/(.*)", "dest": "src/server.js" }
-  ],
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "regions": ["iad1"],
   "headers": [
     {
