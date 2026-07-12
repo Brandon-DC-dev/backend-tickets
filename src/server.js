@@ -47,14 +47,15 @@ const corsOptions = {
   origin(origin, cb) {
     // Requests sin Origin (curl, Postman, server-to-server) siempre pasan.
     if (!origin) return cb(null, true);
-    // Normalizamos para tolerar trailing slashes / case differences.
+    // Match literal (case-insensitive, sin trailing slashes).
     const normalized = origin.replace(/\/+$/, '').toLowerCase();
     const allowed = origins.some(
-      (o) => o.replace(/\/+$/, '').toLowerCase() === normalized,
+      (o) => (o || '').replace(/\/+$/, '').toLowerCase() === normalized,
     );
-    if (!allowed && process.env.NODE_ENV !== 'production') {
-      console.warn(`[cors] blocked origin: ${origin}`);
-    }
+    // Loguear siempre que esté bloqueado (clave para debug en prod).
+    console.log(
+      `[cors] origin=${origin} normalized=${normalized} allowed=${allowed} list=${JSON.stringify(origins)}`,
+    );
     if (allowed) return cb(null, true);
     // No lanzar error: pasamos `false` y el paquete `cors` omite los
     // headers, devolviendo un 403 CORS nativo del navegador sin 500.
