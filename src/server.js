@@ -41,7 +41,7 @@ const defaultOrigins = [
   // Dominio de producción conocido. Sobre-escribible vía env CORS_ORIGINS.
   'https://frontend-tickets.vercel.app',
 ];
-const origins = [...defaultOrigins, ...env.corsOrigins];
+const origins = [...new Set([...defaultOrigins, ...env.corsOrigins])];
 
 const corsOptions = {
   origin(origin, cb) {
@@ -52,6 +52,9 @@ const corsOptions = {
     const allowed = origins.some(
       (o) => o.replace(/\/+$/, '').toLowerCase() === normalized,
     );
+    if (!allowed && process.env.NODE_ENV !== 'production') {
+      console.warn(`[cors] blocked origin: ${origin}`);
+    }
     if (allowed) return cb(null, true);
     // No lanzar error: pasamos `false` y el paquete `cors` omite los
     // headers, devolviendo un 403 CORS nativo del navegador sin 500.
