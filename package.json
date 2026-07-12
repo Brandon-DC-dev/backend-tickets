@@ -2,7 +2,7 @@
   "name": "backend-supabase",
   "version": "1.0.0",
   "description": "Express + Supabase backend, deployable to Vercel serverless functions.",
-  "main": "src/app.js",
+  "main": "src/server.js",
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",

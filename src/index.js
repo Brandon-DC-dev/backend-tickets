@@ -1,10 +1,9 @@
 // filepath: src/index.js
-// Application entry point.
-// - Local dev (pnpm dev / pnpm start): boots an HTTP server on PORT.
-// - Vercel: this file is NOT used as the serverless entry; vercel.json points
-//   to src/app.js directly. Keeping app.listen() here would crash the lambda
-//   runtime because there is no port to bind.
-import { app } from './app.js';
+// Local-only entry point. Boots an HTTP server for `pnpm dev` / `pnpm start`.
+// Vercel does NOT use this file — its Node runtime imports `src/server.js`
+// directly (auto-detected via the `server.js` filename convention), where
+// the bootstrap also runs. Kept as a shim for backward compatibility.
+import { app } from './server.js';
 import { env } from './config/env.js';
 
 // Vercel sets this env var automatically on every deploy.

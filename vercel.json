@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "src/app.js",
+      "src": "src/server.js",
       "use": "@vercel/node",
       "config": {
         "maxLambdaSize": "50mb",
@@ -11,7 +11,7 @@
     }
   ],
   "routes": [
-    { "src": "/(.*)", "dest": "src/app.js" }
+    { "src": "/(.*)", "dest": "src/server.js" }
   ],
   "regions": ["iad1"]
 }
