@@ -18,7 +18,6 @@
 //     kept as a thin shim for backward compatibility.
 
 import express from 'express';
-import cors from 'cors';
 import { env } from './config/env.js';
 import router from './routes/index.js';
 import { notFoundHandler } from './middleware/notFound.js';
@@ -26,52 +25,15 @@ import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
 
-// Orígenes permitidos para el frontend.
-//   - Dev: lista blanca fija (Astro 4321, mismo puerto 3000) + dominio de
-//     producción a modo de red de seguridad si CORS_ORIGINS no está seteado.
-//   - Prod (recomendado): setear CORS_ORIGINS en Vercel con los dominios
-//     exactos del front (CSV: https://a.com,https://b.com).
-//   - El callback de `cors` REFLEJA el origen del request (no usamos '*'),
-//     necesario porque credentials=true obliga a un origen explícito.
-const defaultOrigins = [
-  'http://localhost:4321',
-  'http://127.0.0.1:4321',
-  'http://localhost:3000',
-  'http://127.0.0.1:3000',
-  // Dominio de producción conocido. Sobre-escribible vía env CORS_ORIGINS.
-  'https://frontend-tickets.vercel.app',
-];
-const origins = [...new Set([...defaultOrigins, ...env.corsOrigins])];
-
-const corsOptions = {
-  origin(origin, cb) {
-    // Requests sin Origin (curl, Postman, server-to-server) siempre pasan.
-    if (!origin) return cb(null, true);
-    // Match literal (case-insensitive, sin trailing slashes).
-    const normalized = origin.replace(/\/+$/, '').toLowerCase();
-    const allowed = origins.some(
-      (o) => (o || '').replace(/\/+$/, '').toLowerCase() === normalized,
-    );
-    // Loguear siempre que esté bloqueado (clave para debug en prod).
-    console.log(
-      `[cors] origin=${origin} normalized=${normalized} allowed=${allowed} list=${JSON.stringify(origins)}`,
-    );
-    if (allowed) return cb(null, true);
-    // No lanzar error: pasamos `false` y el paquete `cors` omite los
-    // headers, devolviendo un 403 CORS nativo del navegador sin 500.
-    return cb(null, false);
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['Content-Length', 'Content-Type'],
-  maxAge: 86400, // cache de preflight: 24h
-  optionsSuccessStatus: 204,
-};
-
-app.use(cors(corsOptions));
-// Preflight explícito para todas las rutas (algunos proxies lo necesitan).
-app.options(/^\/.*/, cors(corsOptions));
+// CORS is configured at the Vercel edge via the `headers` block in
+// vercel.json. This guarantees CORS headers on every response —
+// including preflight OPTIONS that Vercel intercepts before any lambda
+// runs. Keeping it out of Express means there is no risk of the lambda
+// and the CDN emitting conflicting headers.
+//
+// For local dev, the Vite proxy in the Astro frontend already forwards
+// /api → this server, so the browser never makes a true cross-origin
+// request and CORS is not exercised in dev.
 
 // Core middleware
 app.use(express.json());
