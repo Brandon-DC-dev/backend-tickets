@@ -35,6 +35,22 @@ const app = express();
 // /api → this server, so the browser never makes a true cross-origin
 // request and CORS is not exercised in dev.
 
+// --- TEMPORARY DEBUG ENDPOINT — remove after diagnosis ----------------------
+app.get('/_debug/cors', (req, res) => {
+  const envOrigins = (process.env.CORS_ORIGINS || process.env.CORS_ORIGIN || '')
+    .split(',').map((s) => s.trim()).filter(Boolean);
+  res.json({
+    requestOrigin: req.headers.origin || null,
+    processEnvCorsOrigins: envOrigins,
+    allCorsEnvVars: Object.fromEntries(
+      Object.entries(process.env).filter(([k]) => /CORS|ORIGIN/i.test(k)),
+    ),
+    vercel: !!process.env.VERCEL,
+    nodeEnv: process.env.NODE_ENV,
+  });
+});
+// ---------------------------------------------------------------------------
+
 // Core middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
