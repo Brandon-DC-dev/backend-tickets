@@ -1,6 +1,6 @@
 // filepath: src/routes/ticketObservaciones.routes.js
 // CRUD + helpers for ticket_observaciones
-// (id, ticket_id, gestor_id, observacion, fecha).
+// (id, ticket_id, gestor_id, observacion, created_at).
 //
 // Extra endpoints:
 //   GET    /ticket-observaciones/por-ticket/:ticketId
@@ -19,7 +19,7 @@ import { supabase } from '../config/supabase.js';
 const router = Router();
 
 // --- GET /ticket-observaciones/por-ticket/:ticketId -----------------------
-// Devuelve todas las observaciones del ticket, ordenadas por fecha
+// Devuelve todas las observaciones del ticket, ordenadas por created_at
 // descendente (más reciente primero).
 router.get(
   '/por-ticket/:ticketId',
@@ -31,7 +31,7 @@ router.get(
           '*, gestor:gestores!ticket_observaciones_gestor_id_fkey(*)',
         )
         .eq('ticket_id', req.params.ticketId)
-        .order('fecha', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) {
         return res
