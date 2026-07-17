@@ -8,6 +8,7 @@ import gestoresRoutes from './gestores.routes.js';
 import columnasTableroRoutes from './columnasTablero.routes.js';
 import ticketsRoutes from './tickets.routes.js';
 import ticketHistorialRoutes from './ticketHistorial.routes.js';
+import ticketObservacionesRoutes from './ticketObservaciones.routes.js';
 import tableroRoutes from './tablero.routes.js';
 
 const router = Router();
@@ -83,6 +84,16 @@ router.get('/', (req, res) => {
       'PUT    /api/ticket-historial/:id',
       'PATCH  /api/ticket-historial/:id',
       'DELETE /api/ticket-historial/:id',
+      '',
+      '--- ticket_observaciones ---',
+      'GET    /api/ticket-observaciones',
+      'GET    /api/ticket-observaciones/:id',
+      'GET    /api/ticket-observaciones/por-ticket/:ticketId',
+      'POST   /api/ticket-observaciones',
+      'POST   /api/ticket-observaciones/por-ticket/:ticketId',
+      'PUT    /api/ticket-observaciones/:id',
+      'PATCH  /api/ticket-observaciones/:id',
+      'DELETE /api/ticket-observaciones/:id',
     ],
   });
 });
@@ -156,6 +167,7 @@ router.use('/gestores', gestoresRoutes);
 router.use('/columnas-tablero', columnasTableroRoutes);
 router.use('/tickets', ticketsRoutes);
 router.use('/ticket-historial', ticketHistorialRoutes);
+router.use('/ticket-observaciones', ticketObservacionesRoutes);
 router.use('/tablero', tableroRoutes);
 
 export default router;
