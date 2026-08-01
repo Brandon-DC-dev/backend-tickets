@@ -10,6 +10,8 @@ import ticketsRoutes from './tickets.routes.js';
 import ticketHistorialRoutes from './ticketHistorial.routes.js';
 import ticketObservacionesRoutes from './ticketObservaciones.routes.js';
 import tableroRoutes from './tablero.routes.js';
+import ticketFollowupRoutes from './ticketFollowup.routes.js';
+import pushRoutes from './push.routes.js';
 
 const router = Router();
 
@@ -94,6 +96,17 @@ router.get('/', (req, res) => {
       'PUT    /api/ticket-observaciones/:id',
       'PATCH  /api/ticket-observaciones/:id',
       'DELETE /api/ticket-observaciones/:id',
+      '',
+      '--- ticket followups ---',
+      'POST   /api/ticket-followup',
+      'GET    /api/ticket-followup',
+      'GET    /api/ticket-followup/:ticketId',
+      'DELETE /api/ticket-followup/:ticketId',
+      '',
+      '--- push notifications ---',
+      'GET    /api/push/public-key',
+      'POST   /api/push/subscribe',
+      'DELETE /api/push/unsubscribe',
     ],
   });
 });
@@ -169,5 +182,7 @@ router.use('/tickets', ticketsRoutes);
 router.use('/ticket-historial', ticketHistorialRoutes);
 router.use('/ticket-observaciones', ticketObservacionesRoutes);
 router.use('/tablero', tableroRoutes);
+router.use('/ticket-followup', ticketFollowupRoutes);
+router.use('/push', pushRoutes);
 
 export default router;
