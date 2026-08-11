@@ -15,7 +15,7 @@ import pushRoutes from './push.routes.js';
 
 const router = Router();
 
-// Root index route.
+// Root index route. new cambio minimo
 router.get('/', (req, res) => {
   res.json({
     name: 'backend-supabase API',
