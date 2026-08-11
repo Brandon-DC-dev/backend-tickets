@@ -149,6 +149,83 @@ export async function cancelFollowup(ticketId) {
   return { deleted, ticketId };
 }
 
+/**
+ * Marca que se envió una notificación. Llamado por el Service Worker del
+ * navegador cada vez que dispara una notificación local (reemplaza al
+ * antiguo cron del backend).
+ *
+ * Comportamiento:
+ *   - Si la fila ya no existe → { done: true, reason: 'not_found' }.
+ *   - Si todavía no vence la próxima fecha → noop (el SW verá el mismo
+ *     nextAt y volverá a llamar más tarde).
+ *   - Si era la última notificación → DELETE fila + { done: true }.
+ *   - Si quedan más → +1 a notifications_sent, avanza next_notification_at.
+ *
+ * @returns {Promise<{
+ *   done: boolean,
+ *   reason?: 'completed' | 'not_found',
+ *   ticketId: string,
+ *   nextAt?: string,
+ *   sent?: number,
+ *   deleted?: number,
+ * }>}
+ */
+export async function tickFollowup(ticketId) {
+  const { data: row, error } = await followupRepo.findByTicketId(ticketId);
+  if (error) throw error;
+  if (!row) {
+    return { done: true, reason: 'not_found', ticketId };
+  }
+
+  const now = Date.now();
+  const nextAtMs = new Date(row.next_notification_at).getTime();
+
+  // Si todavía no vence, devolvemos la misma nextAt para que el SW sepa
+  // que no debe disparar todavía (defensa contra llamadas duplicadas).
+  if (nextAtMs > now) {
+    return {
+      done: false,
+      ticketId,
+      nextAt: row.next_notification_at,
+      sent: row.notifications_sent ?? 0,
+    };
+  }
+
+  const sentSoFar = row.notifications_sent ?? 0;
+  const isLast = sentSoFar + 1 >= row.total_notifications;
+
+  if (isLast) {
+    const { count } = await followupRepo.deleteByTicketId(ticketId);
+    return {
+      done: true,
+      reason: 'completed',
+      ticketId,
+      deleted: count ?? 0,
+    };
+  }
+
+  const newNextAt = new Date(
+    now + row.interval_minutes * 60_000,
+  ).toISOString();
+  const nextSent = sentSoFar + 1;
+
+  // Update directo via cliente de Supabase para mantener este servicio
+  // dependiente sólo del repository; si más adelante quieres abstraerlo,
+  // agregamos `followupRepo.advance(id, sent, nextAt)`.
+  const { supabase } = await import('../config/supabase.js');
+  const { error: updateErr } = await supabase
+    .from('ticket_followups')
+    .update({
+      notifications_sent: nextSent,
+      next_notification_at: newNextAt,
+    })
+    .eq('id', row.id);
+
+  if (updateErr) throw updateErr;
+
+  return { done: false, ticketId, nextAt: newNextAt, sent: nextSent };
+}
+
 // --- helpers ----------------------------------------------------------------
 
 /**

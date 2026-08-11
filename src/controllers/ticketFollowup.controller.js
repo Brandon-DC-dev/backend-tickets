@@ -44,3 +44,19 @@ export const cancel = asyncHandler(async (req, res) => {
   const result = await followupService.cancelFollowup(req.params.ticketId);
   res.json(result);
 });
+
+/**
+ * POST /api/ticket-followup/:ticketId/tick
+ *
+ * El Service Worker del navegador llama este endpoint cada vez que dispara
+ * una notificación local, para mantener Supabase sincronizado (contador y
+ * próxima fecha). Reemplaza la lógica que antes vivía en el cron.
+ *
+ * Respuestas posibles:
+ *   200 { done: false, nextAt, sent }   — todavía faltan notificaciones
+ *   200 { done: true, reason, ticketId } — terminó o no existe
+ */
+export const tick = asyncHandler(async (req, res) => {
+  const result = await followupService.tickFollowup(req.params.ticketId);
+  res.json(result);
+});

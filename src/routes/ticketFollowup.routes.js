@@ -36,4 +36,15 @@ router.delete(
   ctrl.cancel,
 );
 
+// POST /:ticketId/tick — el Service Worker del navegador lo llama cuando
+// dispara una notificación local. Reemplaza lo que antes hacía el cron:
+//   - incrementa notifications_sent
+//   - avanza next_notification_at al siguiente intervalo
+//   - elimina la fila si era la última notificación
+router.post(
+  '/:ticketId/tick',
+  validateSchema({ params: ticketIdParamSchema }),
+  ctrl.tick,
+);
+
 export default router;

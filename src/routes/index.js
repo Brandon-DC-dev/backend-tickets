@@ -102,6 +102,7 @@ router.get('/', (req, res) => {
       'GET    /api/ticket-followup',
       'GET    /api/ticket-followup/:ticketId',
       'DELETE /api/ticket-followup/:ticketId',
+      'POST   /api/ticket-followup/:ticketId/tick   — mark notification sent (called by Service Worker)',
       '',
       '--- push notifications ---',
       'GET    /api/push/public-key',
