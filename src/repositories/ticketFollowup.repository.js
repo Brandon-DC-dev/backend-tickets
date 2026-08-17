@@ -6,7 +6,13 @@
 // métodos devuelven shapes consistentes ({ data, error }) para que la capa
 // de servicio decida cómo presentarlos.
 
-import { supabase } from '../config/supabase.js';
+import { supabaseAdmin, supabase } from '../config/supabase.js';
+
+// La tabla `ticket_followups` tiene RLS habilitado (ver migración 001).
+// El backend usa la service-role key para escribir sin restricciones.
+// Si `SUPABASE_SERVICE_ROLE_KEY` no está configurada, hacemos fallback al
+// cliente anon (que fallará por RLS hasta que se configure la key).
+const db = supabaseAdmin ?? supabase;
 
 const TABLE = 'ticket_followups';
 
@@ -24,7 +30,7 @@ const TABLE = 'ticket_followups';
  * }} row
  */
 export async function createFollowup(row) {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from(TABLE)
     .insert({
       ticket_id: row.ticket_id,
@@ -44,7 +50,7 @@ export async function createFollowup(row) {
  * Busca el seguimiento activo de un ticket.
  */
 export async function findByTicketId(ticketId) {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from(TABLE)
     .select('*')
     .eq('ticket_id', ticketId)
@@ -58,7 +64,7 @@ export async function findByTicketId(ticketId) {
  * la tabla sólo contiene activos).
  */
 export async function listAll() {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from(TABLE)
     .select('*')
     .order('next_notification_at', { ascending: true });
@@ -74,7 +80,7 @@ export async function listAll() {
  * backlog (el siguiente tick procesa el resto).
  */
 export async function findDue(nowIso, { limit = 100 } = {}) {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from(TABLE)
     .select('*')
     .lte('next_notification_at', nowIso)
@@ -96,7 +102,7 @@ export async function findDue(nowIso, { limit = 100 } = {}) {
  */
 export async function markSentAndAdvance(id) {
   // Leemos el row actual primero para calcular el nuevo timestamp.
-  const { data: current, error: readErr } = await supabase
+  const { data: current, error: readErr } = await db
     .from(TABLE)
     .select('notifications_sent, total_notifications, interval_minutes')
     .eq('id', id)
@@ -117,7 +123,7 @@ export async function markSentAndAdvance(id) {
     Date.now() + current.interval_minutes * 60_000,
   ).toISOString();
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from(TABLE)
     .update({
       notifications_sent: nextSent,
@@ -134,7 +140,7 @@ export async function markSentAndAdvance(id) {
  * Elimina el seguimiento de un ticket. Devuelve cuántas filas se afectaron.
  */
 export async function deleteByTicketId(ticketId) {
-  const { data, error, count } = await supabase
+  const { data, error, count } = await db
     .from(TABLE)
     .delete()
     .eq('ticket_id', ticketId)

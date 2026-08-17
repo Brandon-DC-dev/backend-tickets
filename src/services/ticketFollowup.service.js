@@ -45,11 +45,8 @@ export async function createFollowup(input) {
   if (!Number.isFinite(notifications) || notifications <= 0) {
     throw new ValidationError('notifications must be greater than 0.');
   }
-  if (notifications > durationMinutes) {
-    throw new ValidationError(
-      'notifications cannot be greater than durationMinutes.',
-    );
-  }
+  // Nota: se permite notifications > durationMinutes; el cálculo de
+  // effectiveNotifications más abajo recorta al máximo posible (1 aviso/min).
 
   // --- Validaciones de dominio ---
   const { data: ticket, error: ticketErr } = await ticketRepo.getStatus(ticketId);
@@ -74,15 +71,10 @@ export async function createFollowup(input) {
   }
 
   // --- Cálculos ---
-  const intervalMinutes = Math.floor(durationMinutes / notifications);
-  if (intervalMinutes <= 0) {
-    // Salvaguarda: si por algún motivo notifications == durationMinutes,
-    // el intervalo es 1 minuto. Pero en la práctica durationMinutes >= notifications,
-    // así que interval siempre es >= 1.
-    throw new ValidationError(
-      'Computed interval is 0. Increase durationMinutes or decrease notifications.',
-    );
-  }
+  // Si el cliente pide más notificaciones que minutos (caso típico: 1 aviso
+  // por minuto), recortamos al máximo posible: 1 minuto entre avisos.
+  const effectiveNotifications = Math.min(notifications, durationMinutes);
+  const intervalMinutes = Math.max(1, Math.floor(durationMinutes / effectiveNotifications));
 
   // La primera notificación se programa para dentro de `intervalMinutes`.
   const nextNotificationAt = new Date(
@@ -92,7 +84,7 @@ export async function createFollowup(input) {
   const { data, error } = await followupRepo.createFollowup({
     ticket_id: ticketId,
     duration_minutes: durationMinutes,
-    total_notifications: notifications,
+    total_notifications: effectiveNotifications,
     interval_minutes: intervalMinutes,
     next_notification_at: nextNotificationAt,
     message,
@@ -209,11 +201,11 @@ export async function tickFollowup(ticketId) {
   ).toISOString();
   const nextSent = sentSoFar + 1;
 
-  // Update directo via cliente de Supabase para mantener este servicio
-  // dependiente sólo del repository; si más adelante quieres abstraerlo,
-  // agregamos `followupRepo.advance(id, sent, nextAt)`.
-  const { supabase } = await import('../config/supabase.js');
-  const { error: updateErr } = await supabase
+  // Update directo via cliente admin (bypassa RLS). Si en el futuro quieres
+  // abstraerlo, agregamos `followupRepo.advance(id, sent, nextAt)`.
+  const { supabaseAdmin, supabase } = await import('../config/supabase.js');
+  const db = supabaseAdmin ?? supabase;
+  const { error: updateErr } = await db
     .from('ticket_followups')
     .update({
       notifications_sent: nextSent,

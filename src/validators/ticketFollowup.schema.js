@@ -14,11 +14,7 @@ export const createFollowupBodySchema = z
     notifications: z.number().int().positive(),
     message: z.string().max(500).optional().default(''),
   })
-  .strict()
-  .refine((v) => v.notifications <= v.durationMinutes, {
-    message: 'notifications cannot be greater than durationMinutes.',
-    path: ['notifications'],
-  });
+  .strict();
 
 // GET/DELETE /api/ticket-followup/:ticketId
 export const ticketIdParamSchema = z.object({

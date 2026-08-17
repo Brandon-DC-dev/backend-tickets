@@ -1,7 +1,11 @@
 // filepath: src/repositories/pushSubscription.repository.js
 // Capa de acceso a datos para `push_subscriptions`.
 
-import { supabase } from '../config/supabase.js';
+import { supabaseAdmin, supabase } from '../config/supabase.js';
+
+// La tabla `push_subscriptions` tiene RLS habilitado (ver migración 001).
+// Mismo motivo que en ticketFollowup.repository: usamos service-role.
+const db = supabaseAdmin ?? supabase;
 
 const TABLE = 'push_subscriptions';
 
@@ -19,7 +23,7 @@ const TABLE = 'push_subscriptions';
  * }} sub
  */
 export async function upsertSubscription(sub) {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from(TABLE)
     .upsert(
       {
@@ -43,7 +47,7 @@ export async function upsertSubscription(sub) {
  * para personalización.
  */
 export async function listAll() {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from(TABLE)
     .select('*');
 
@@ -54,7 +58,7 @@ export async function listAll() {
  * Elimina una suscripción por endpoint.
  */
 export async function deleteByEndpoint(endpoint) {
-  const { data, error, count } = await supabase
+  const { data, error, count } = await db
     .from(TABLE)
     .delete()
     .eq('endpoint', endpoint)
